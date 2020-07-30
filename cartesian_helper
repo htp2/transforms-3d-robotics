@@ -1,0 +1,66 @@
+"""
+Written by: Henry Phalen
+
+Based on code developed in collaboration with Kevin Gilboy
+for Computer Integrated Surgery at JHU in Fall 2018
+"""
+
+import numpy as np
+from transforms3d import affines, quaternions
+
+
+"""
+ Transforms a point into another frame (simply removes homogeneous hassle elsewhere)
+Input:  [array] frame      Frame to transform the point(s) into
+        [array] points     Point(s) to transform
+Output: [array] points_new Transformed point(s)
+"""
+
+
+def change_frame_of_points(frame, points):
+    if len(points.shape) == 1:
+        points = np.expand_dims(points, axis=0)
+    points_new = np.zeros(points.shape)
+    # Cycle through each provided point
+    for point in range(points.shape[0]):
+        point_h = np.block([points[point, :], 1]).T
+        point_new_h = frame @ point_h
+        points_new[point, :] = point_new_h[0:3].T
+    return points_new
+
+
+"""
+Make a 4x4 homogenous matrix frame (wraps affine call since we do not care about zoom and shear)
+Input:  [array] R Rotation matrix
+        [array] p Translation vector
+Output: [array] E transformation matrix (frame)
+"""
+
+
+def make_frame(R, p):
+    E = affines.compose(p, R, np.ones(3))
+    return E
+
+def unframe(E):
+    T,R,Z,S=affines.decompose(E)
+    return R,T
+
+def position(E):
+    _,T = unframe(E)
+    return T
+
+def rotation(E):
+    R,_ = unframe(E)
+    return R
+
+def quat_to_mat(x,y,z,w):
+    return quaternions.quat2mat((x, y, z, w))
+
+def rotz(rad):
+    return np.array([[np.cos(rad), -np.sin(rad), 0], [np.sin(rad), np.cos(rad), 0], [0, 0, 1]])
+
+def rotx(rad):
+    return np.array([[1, 0, 0], [0, np.cos(rad), -np.sin(rad)], [0, np.sin(rad), np.cos(rad)]])
+
+def roty(rad):
+    return np.array([[np.cos(rad), 0, np.sin(rad)], [0, 1, 0], [-np.sin(rad), 0, np.cos(rad)]])
